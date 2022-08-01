@@ -1,0 +1,3 @@
+LD_LIBRARY_PATH=../../depends/lib
+export LD_LIBRARY_PATH
+./test_event_server
