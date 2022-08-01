@@ -22,6 +22,11 @@ void timer2(int sock, short which, void *arg)
 	cout << "[timer2]" << endl;
 }
 
+void timer3(int sock, short which, void *arg)
+{
+	cout << "[timer3]" << endl;
+}
+
 #define SPORT 5001
 
 int main()
@@ -43,6 +48,14 @@ int main()
 
 	event *ev2 = event_new(base, -1, EV_PERSIST, timer2, 0);
 	event_add(ev2, &tv2);
+
+	// 超时性能优化，默认event用二插堆存储(完全二插树) 插入删除O(logn)
+    // 优化到双向队列，插入删除O(1)
+	event *ev3 = event_new(base, -1, EV_PERSIST, timer3, 0);
+	static timeval tv_in = {3, 0};
+	const timeval *tv3;
+	tv3 = event_base_init_common_timeout(base, &tv_in);
+	event_add(ev3, tv3);  // 插入性能O（1） 
 
 	event_base_dispatch(base);
 	event_base_free(base);
