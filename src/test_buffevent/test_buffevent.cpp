@@ -11,7 +11,7 @@ using namespace std;
 // 错误、超时、连接断开时回调用
 void event_cb(bufferevent *be, short events, void *arg)
 {
-	cout << "[E]" << flush;
+	// cout << "[E]" << flush;
 	if (events & BEV_EVENT_TIMEOUT && events & BEV_EVENT_READING) {
 		cout << "BEV_EVENT_TIMEOUT" << endl;
 		// bufferevent_enable(be, EV_READ);
@@ -25,12 +25,12 @@ void event_cb(bufferevent *be, short events, void *arg)
 
 void write_cb(bufferevent *be, void *arg)
 {
-	cout << "[W]" << flush;
+	// cout << "[W]" << flush;
 }
 
 void read_cb(bufferevent *be, void *arg)
 {
-	cout << "[R]" << flush;
+	// cout << "[R]" << flush;
 	char data[1024] = {0};
 
 	// 读取输入缓冲的数据
@@ -38,12 +38,6 @@ void read_cb(bufferevent *be, void *arg)
 	cout << data << flush;
 	if (len <= 0) {
 		return;
-	}
-
-	if (strstr(data, "quit") != NULL) {
-		cout << "quit" << flush;
-		// 退出并关闭socket，因为在创建时间时指定了BEV_OPT_CLOSE_ON_FREE
-		bufferevent_free(be);
 	}
 
 	// 发送数据，写入到输出缓冲
@@ -62,7 +56,7 @@ void listen_cb(evconnlistener *ev, evutil_socket_t s, sockaddr *sin, int slen, v
 	
 	// 设置水位
 	// 读取水位
-	bufferevent_setwatermark(bev, EV_READ, 5, 10);
+	bufferevent_setwatermark(bev, EV_READ, 0, 0);
 	// bufferevent_setwatermark(bev, EV_WRITE, 5, 0); 
 
 	// 超时时间的设置
