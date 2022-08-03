@@ -18,23 +18,41 @@ enum bufferevent_filter_result filter_in(struct evbuffer *src, struct evbuffer *
 	char data[1024] = {0};
 	int len = evbuffer_remove(src, data, sizeof(data));
 	evbuffer_add(dst, data, len);
-
 	return BEV_OK;
 }
 
 void read_cb(bufferevent *bev, void *arg)
 {
 	cout << "******read_cb*******" << endl;
-	// 回复OK
 	char data[1024] = {0};
+	static int flag = true;
+#if 1
+    // 一定要将数据读完
+	while (bufferevent_read(bev, data, sizeof(data)) > 0) {
+		cout << data << flush;
+		if (flag) {
+			bufferevent_write(bev, "OK", 3);
+			flag = false;
+		}
+		memset(data, 0, sizeof(data));
+	}
+#else
+    // 数据无法读完
 	bufferevent_read(bev, data, sizeof(data));
 	cout << data << flush;
-	bufferevent_write(bev, "OK", 3);
+	if (flag) {
+		bufferevent_write(bev, "OK", 3);
+		flag = false;
+	}
+#endif
 }
 
 void event_cb(bufferevent *bev, short events, void *arg)
 {
 	cout << "event_cb" << endl;
+	if (events & BEV_EVENT_EOF) {
+		cout << "BEV_EVENT_EOF" << endl;
+	}
 }
 
 void listen_cb(struct evconnlistener *e, evutil_socket_t s, struct sockaddr *addr, int socklen, void * arg)
