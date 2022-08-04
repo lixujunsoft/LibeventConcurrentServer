@@ -9,7 +9,7 @@
 using namespace std;
 
 #define SPORT 5001
-#define FILE_PATH "001.txt"
+#define FILE_PATH "002.png"
 
 enum bufferevent_filter_result filter_out(struct evbuffer *src, struct evbuffer *dst, ev_ssize_t dst_limit,
     enum bufferevent_flush_mode mode, void *ctx) 

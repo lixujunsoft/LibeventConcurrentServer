@@ -6,9 +6,15 @@
 #include <signal.h>
 #include <string.h>
 #include <string>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 using namespace std;
 
 #define SPORT 5001
+
+static int fd;
+static bool flag = true;
 
 enum bufferevent_filter_result filter_in(struct evbuffer *src, struct evbuffer *dst, ev_ssize_t dst_limit,
     enum bufferevent_flush_mode mode, void *ctx) 
@@ -25,15 +31,26 @@ void read_cb(bufferevent *bev, void *arg)
 {
 	cout << "******read_cb*******" << endl;
 	char data[1024] = {0};
-	static int flag = true;
+	int len;
 #if 1
     // 一定要将数据读完
-	while (bufferevent_read(bev, data, sizeof(data)) > 0) {
-		cout << data << flush;
+	while ((len = bufferevent_read(bev, data, sizeof(data))) > 0) {
 		if (flag) {
+			fd = open(data, O_RDWR | O_CREAT | O_TRUNC, 0664);
+			if (fd < 0) {
+				cout << "open failed: fd = " << fd << endl;
+				exit(0);
+			}
 			bufferevent_write(bev, "OK", 3);
 			flag = false;
+			memset(data, 0, sizeof(data));
+			continue;
 		}
+
+		if (!flag) {
+			write(fd, data, len);
+		}
+		cout << len << endl;
 		memset(data, 0, sizeof(data));
 	}
 #else
@@ -52,6 +69,8 @@ void event_cb(bufferevent *bev, short events, void *arg)
 	cout << "event_cb" << endl;
 	if (events & BEV_EVENT_EOF) {
 		cout << "BEV_EVENT_EOF" << endl;
+		fsync(fd);
+		close(fd);
 	}
 }
 
@@ -70,7 +89,7 @@ void listen_cb(struct evconnlistener *e, evutil_socket_t s, struct sockaddr *add
 		0);         // 传递给回调函数的参数
 	// 3 设置回调 读取 事件（处理连接断开）
 	bufferevent_setcb(bev_filter, read_cb, NULL, event_cb, NULL);
-	bufferevent_enable(bev_filter, EV_READ | EV_WRITE);
+	bufferevent_enable(bev_filter, EV_READ | EV_WRITE | 0666);
 }
 
 int main()
