@@ -6,18 +6,59 @@
 #include <signal.h>
 #include <string.h>
 #include <string>
+#include <zlib.h>
 using namespace std;
 
 #define SPORT 5001
-#define FILE_PATH "002.png"
+#define FILE_PATH "001.txt"
+
+static z_stream *z_output;
 
 enum bufferevent_filter_result filter_out(struct evbuffer *src, struct evbuffer *dst, ev_ssize_t dst_limit,
     enum bufferevent_flush_mode mode, void *ctx) 
 {
-	cout << "filter_out" << endl;
-	char data[1024] = {0};
-	int len = evbuffer_remove(src, data, sizeof(data));
-	evbuffer_add(dst, data, len);
+	// 压缩文件
+	evbuffer_iovec v_in[1];
+	int n = evbuffer_peek(src, -1, 0, v_in, 1);
+	if (n <= 0) {
+		// 没有数据
+		return BEV_NEED_MORE;
+	}
+
+	// 输入数据大小
+	z_output->avail_in = v_in[0].iov_len;
+	z_output->next_in = (Byte*)v_in[0].iov_base;
+
+	// 申请输出空间大小
+	evbuffer_iovec v_out[1];
+	evbuffer_reserve_space(dst, 4096, v_out, 1);
+
+	// zlib 输出空间大小
+	z_output->avail_out = v_out[0].iov_len;
+	z_output->next_out = (Byte*)v_out[0].iov_base;
+
+	// zlib压缩
+	int re = deflate(z_output, Z_SYNC_FLUSH);
+	if (Z_OK != re) {
+		cout << "deflate failed!" << endl;
+	}
+
+	// 压缩用了多少数据, 从source evbuffer中移除
+	// z_output->avail_in 传入传出参数： 
+	int nread = v_in[0].iov_len - z_output->avail_in; 
+
+	// 压缩后的数据大小，传入des evbuffer
+	int nwrite = v_out[0].iov_len - z_output->avail_out;
+
+	// 移除source evbuffer中的数据
+	evbuffer_drain(src, nread);
+
+	// 传入des evbuffer
+	v_out[0].iov_len = nwrite;
+	evbuffer_commit_space(dst, v_out, 1);
+
+	cout << "nread = " << nread << endl;    // 读取的数据
+	cout << "nwrite = " << nwrite << endl;  // 压缩过后的数据
 	return BEV_OK;
 }
 
@@ -65,6 +106,12 @@ void event_cb(bufferevent *bev, short events, void *arg)
 			cout << "open file " << FILE_PATH << "failed" << endl;
 			return;
 		}
+
+		// 初始化zlib上下文
+		z_output = new z_stream();
+		// Z_DEFAULT_COMPRESSION 使用默认方式压缩
+		deflateInit(z_output, Z_DEFAULT_COMPRESSION);
+
 		// 设置读取、写入和事件的回调
 		bufferevent_setcb(bev_filter, read_cb, write_cb, event_cb, fp);
 		bufferevent_enable(bev_filter, EV_READ | EV_WRITE);

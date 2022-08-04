@@ -4,7 +4,7 @@ all:$(TARGET) MakeSH
 
 CXXFLAGS=-I../../depends/include
 LDFLAGS=-L../../depends/lib
-LIBS=-levent
+LIBS=-levent -lz
 
 SRCS:=$(wildcard *.cpp)
 OBJS:=$(patsubst %.cpp,%.o,$(SRCS))

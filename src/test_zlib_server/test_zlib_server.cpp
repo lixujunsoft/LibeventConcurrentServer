@@ -9,12 +9,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <zlib.h>
 using namespace std;
 
 #define SPORT 5001
 
 static int fd;
 static bool flag = true;
+
+static z_stream *z_intput;
 
 enum bufferevent_filter_result filter_in(struct evbuffer *src, struct evbuffer *dst, ev_ssize_t dst_limit,
     enum bufferevent_flush_mode mode, void *ctx) 
@@ -88,6 +91,10 @@ void listen_cb(struct evconnlistener *e, evutil_socket_t s, struct sockaddr *add
 		NULL,       // 清理的回调函数
 		0);         // 传递给回调函数的参数
 	// 3 设置回调 读取 事件（处理连接断开）
+
+	z_intput = new z_stream();
+	inflateInit(z_intput);
+
 	bufferevent_setcb(bev_filter, read_cb, NULL, event_cb, NULL);
 	bufferevent_enable(bev_filter, EV_READ | EV_WRITE | 0666);
 }
