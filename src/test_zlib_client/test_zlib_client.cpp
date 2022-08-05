@@ -10,7 +10,7 @@
 using namespace std;
 
 #define SPORT 5001
-#define FILE_PATH "001.txt"
+#define FILE_PATH "002.png"
 
 static z_stream *z_output;
 
@@ -27,7 +27,7 @@ enum bufferevent_filter_result filter_out(struct evbuffer *src, struct evbuffer 
 
 	// 输入数据大小
 	z_output->avail_in = v_in[0].iov_len;
-	z_output->next_in = (Byte*)v_in[0].iov_base;
+	z_output->next_in = (Byte *)v_in[0].iov_base;
 
 	// 申请输出空间大小
 	evbuffer_iovec v_out[1];
@@ -35,7 +35,7 @@ enum bufferevent_filter_result filter_out(struct evbuffer *src, struct evbuffer 
 
 	// zlib 输出空间大小
 	z_output->avail_out = v_out[0].iov_len;
-	z_output->next_out = (Byte*)v_out[0].iov_base;
+	z_output->next_out = (Byte *)v_out[0].iov_base;
 
 	// zlib压缩
 	int re = deflate(z_output, Z_SYNC_FLUSH);
