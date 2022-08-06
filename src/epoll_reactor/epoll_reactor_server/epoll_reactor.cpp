@@ -39,11 +39,8 @@ void eventset(struct myevent_s *ev, int fd, void (*call_back)(int, int, void *),
 {
     ev->fd = fd;
     ev->call_back = call_back;
-    ev->events = 0;
     ev->arg = arg;
     ev->status = 0;
-    memset(ev->buf, 0, sizeof(ev->buf));
-    ev->len = 0;
     ev->last_active = time(NULL);                       //调用eventset函数的时间
 
     return;
@@ -142,14 +139,12 @@ void recvdata(int fd, int events, void *arg)
     eventdel(g_efd, ev);        //将该节点从红黑树上摘除
 
     if (len > 0) {
-
         ev->len = len;
         ev->buf[len] = '\0';                                //手动添加字符串结束标记
         printf("C[%d]:%s\n", fd, ev->buf);
 
         eventset(ev, fd, senddata, ev);                     //设置该 fd 对应的回调函数为 senddata
         eventadd(g_efd, EPOLLOUT, ev);                      //将fd加入红黑树g_efd中,监听其写事件
-
     } else if (len == 0) {
         close(ev->fd);
         /* ev-g_events 地址相减得到偏移元素位置 */
@@ -168,14 +163,10 @@ void senddata(int fd, int events, void *arg)
     int len;
 
     len = send(fd, ev->buf, ev->len, 0);                    //直接将数据 回写给客户端。未作处理
-    /*
-    printf("fd=%d\tev->buf=%s\ttev->len=%d\n", fd, ev->buf, ev->len);
-    printf("send len = %d\n", len);
-    */
+
     eventdel(g_efd, ev);                                    //从红黑树g_efd中移除
 
     if (len > 0) {
-
         printf("send[fd=%d], [%d]%s\n", fd, len, ev->buf);
         eventset(ev, fd, recvdata, ev);                     //将该fd的 回调函数改为 recvdata
         eventadd(g_efd, EPOLLIN, ev);                       //从新添加到红黑树上， 设为监听读事件
@@ -193,6 +184,7 @@ void senddata(int fd, int events, void *arg)
 void initlistensocket(int efd, short port)
 {
     struct sockaddr_in sin;
+    const int on = 1;
 
     int lfd = socket(AF_INET, SOCK_STREAM, 0);
     fcntl(lfd, F_SETFL, O_NONBLOCK);                                            //将socket设为非阻塞
@@ -202,6 +194,7 @@ void initlistensocket(int efd, short port)
     sin.sin_addr.s_addr = INADDR_ANY;
     sin.sin_port = htons(port);
 
+    setsockopt(lfd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
     bind(lfd, (struct sockaddr *)&sin, sizeof(sin));
 
     listen(lfd, 20);
